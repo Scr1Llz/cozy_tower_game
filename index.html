@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Уютная башня</title>
+<style>
+:root{--ink:#453b58;--muted:#8d829d;--purple:#8c72d9;--pink:#ffb7cf;--cream:#fffaf4;--line:#efe5f3}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
+body{background:linear-gradient(160deg,#fff5f7 0%,#f6f0ff 55%,#eaf8f4 100%);min-height:100dvh;display:flex;justify-content:center}
+.app{width:min(100%,760px);padding:18px 16px 24px;display:flex;flex-direction:column;min-height:100dvh}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:10px}.brand-icon{width:45px;height:45px;border-radius:15px;background:#fff;box-shadow:0 5px 15px #59477c12;display:grid;place-items:center;font-size:25px}
+h1{font-size:clamp(21px,4vw,29px);line-height:1.1;margin:0;letter-spacing:-.6px}.sub{font-size:12px;color:var(--muted);margin-top:4px}
+.pill{background:#fff;border:1px solid var(--line);border-radius:99px;padding:9px 12px;font-size:13px;white-space:nowrap;font-weight:700}
+.stats{display:flex;gap:8px;margin:0 0 12px}.stat{flex:1;background:#ffffffb8;border:1px solid #fff;border-radius:14px;padding:10px 12px}.stat span{display:block;color:var(--muted);font-size:11px}.stat strong{display:block;font-size:18px;margin-top:2px}
+.game-card{position:relative;flex:1;min-height:420px;max-height:660px;background:linear-gradient(180deg,#e8e3ff 0%,#fff0f5 55%,#fff8e9 100%);border:1px solid #fff;border-radius:25px;overflow:hidden;box-shadow:0 15px 40px #5b477c15}
+canvas{display:block;width:100%;height:100%;position:absolute;inset:0;touch-action:manipulation}
+.hint{position:absolute;top:14px;left:12px;right:12px;text-align:center;pointer-events:none;z-index:2}.hint strong{display:inline-block;background:#ffffffd9;border:1px solid #fff;border-radius:99px;padding:9px 15px;font-size:13px;box-shadow:0 5px 15px #59477c0a}
+.bottom{display:flex;gap:9px;margin-top:12px}.btn{border:0;border-radius:15px;padding:14px 16px;font-size:15px;font-weight:750;cursor:pointer;transition:transform .12s,filter .12s}.btn:active{transform:scale(.98)}.primary{background:var(--purple);color:#fff;box-shadow:0 7px 16px #8c72d933;flex:1}.soft{background:#fff;color:var(--ink);border:1px solid var(--line)}.small{min-width:54px}
+.overlay{position:absolute;inset:0;z-index:5;background:#fffaf4e8;backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:22px;text-align:center}.panel{width:min(100%,370px);background:#fff;border:1px solid #f0e7f5;border-radius:24px;padding:25px 22px;box-shadow:0 16px 40px #5b477c18}.hero{font-size:64px;margin-bottom:8px}.panel h2{font-size:26px;margin:0 0 8px}.panel p{color:var(--muted);line-height:1.55;margin:0 0 18px;font-size:14px}.panel .btn{width:100%}.rules{font-size:12px;color:var(--muted);margin-top:11px}
+.toast{position:absolute;left:50%;top:68px;transform:translateX(-50%);z-index:3;background:#fff;border:1px solid #fff;border-radius:99px;padding:8px 13px;box-shadow:0 7px 18px #5b477c15;font-weight:750;font-size:13px;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}.toast.show{opacity:1}
+@media(max-width:480px){.app{padding:13px 11px 16px}.game-card{min-height:430px}.stat{padding:9px}.stat strong{font-size:16px}.pill{padding:8px 10px;font-size:12px}.bottom .btn{padding:13px 10px;font-size:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+ <div class="brand"><div class="brand-icon">🧸</div><div><h1>Уютная башня</h1><div class="sub">Складывай милые вещи и строй повыше</div></div></div>
+ <div class="pill">✨ Лёгкий режим</div>
+</header>
+<div class="stats">
+ <div class="stat"><span>Этажи</span><strong id="score">0 / 1000</strong></div>
+ <div class="stat"><span>Рекорд</span><strong id="best">0</strong></div>
+ <div class="stat"><span>Помощь</span><strong>∞</strong></div>
+</div>
+<div class="game-card" id="gameCard">
+ <canvas id="game" aria-label="Игровое поле: нажмите, чтобы поставить предмет"></canvas>
+ <div class="hint"><strong id="hintText">Нажми «Начать игру»</strong></div>
+ <div class="toast" id="toast">Отлично!</div>
+ <div class="overlay" id="overlay">
+  <div class="panel"><div class="hero">🏰</div><h2 id="panelTitle">Построим башню?</h2><p id="panelText">Ставь милые предметы друг на друга. Лови момент точнее: чем аккуратнее поставишь, тем шире останется башня!</p><button class="btn primary" id="startBtn">Начать игру</button><div class="rules">Цель — 1000 этажей. Можно отменять ход и пробовать снова.</div></div>
+ </div>
+</div>
+<div class="bottom">
+ <button class="btn primary" id="dropBtn">Поставить предмет ↓</button>
+ <button class="btn soft small" id="undoBtn" title="Убрать последний этаж">↶</button>
+ <button class="btn soft small" id="restartBtn" title="Начать заново">⟳</button>
+</div>
+<div class="sub" style="text-align:center;margin-top:9px">Нажимай на поле или кнопку. Работает на телефоне, планшете и компьютере.</div>
+</div>
+<script>
+(() => {
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const card=document.getElementById('gameCard');
+const $=id=>document.getElementById(id);
+const target=1000;
+const items=[
+ {emoji:'🍰',name:'тортик',img:'cupcake.webp',color:'#ffd0dc',edge:'#f5a9c0'},
+ {emoji:'📚',name:'книжки',img:'books.webp',color:'#d7d0ff',edge:'#aaa0ef'},
+ {emoji:'🪴',name:'растение',img:'plant.webp',color:'#d1f0d9',edge:'#9bd7b0'},
+ {emoji:'☕',name:'чашка',img:'mug.webp',color:'#ffe3b6',edge:'#f6c77e'},
+ {emoji:'🍓',name:'клубничка',img:'donut.webp',color:'#ffd4c8',edge:'#f3a99c'},
+ {emoji:'🧸',name:'игрушка',img:'penguin.webp',color:'#ead6c5',edge:'#d2b39b'},
+ {emoji:'🧁',name:'капкейк',img:'cupcake.webp',color:'#f6d5ff',edge:'#dca9ed'},
+ {emoji:'🪻',name:'цветы',img:'plant.webp',color:'#d9e0ff',edge:'#aab8f0'},
+ {emoji:'🍯',name:'мёд',img:'lantern.webp',color:'#ffe8a7',edge:'#efcc69'},
+ {emoji:'🐱',name:'котик',img:'pillow.webp',color:'#e4d9ff',edge:'#c2b0f2'},
+ {emoji:'🍩',name:'пончик',img:'donut.webp',color:'#ffd7e7',edge:'#f4a7c9'},
+ {emoji:'🎁',name:'подарок',img:'laptop.webp',color:'#c9f0e8',edge:'#8ed7c6'}
+];
+let W=0,H=0,dpr=1,stack=[],moving=null,playing=false,won=false,anim=0,lastTime=0,offset=0,toastTimer=null;
+const pictures={};
+for(const item of items){if(item.img&&!pictures[item.img]){const im=new Image();im.src='assets/'+item.img;pictures[item.img]=im;im.onload=()=>draw();}}
+let best=Number(localStorage.getItem('cozyTowerBest')||0);
+$('best').textContent=best;
+function resize(){
+ const r=card.getBoundingClientRect(); dpr=Math.min(window.devicePixelRatio||1,2);
+ W=r.width;H=r.height;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+ canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0);draw();
+}
+function baseY(){return H-45}
+function blockH(){return Math.max(58,Math.min(76,W*.18))}
+function blockW(){return Math.min(260,W*.72)}
+function initStack(){const bw=blockW(),bh=blockH();stack=[{x:(W-bw)/2,y:baseY()-bh,w:bw,h:bh,item:items[0]}];moving=null;offset=0;won=false;updateStats();}
+function spawn(){
+ if(!playing||won||moving)return;
+ const prev=stack[stack.length-1],w=blockW(),h=blockH();
+ moving={x:W*.08,y:prev.y-h-3,w,h,item:items[(stack.length)%items.length],dir:1,speed:Math.min(1.65,0.65+stack.length*.025),phase:0};
+ $('hintText').textContent='Поймай момент и нажми!';
+}
+function updateStats(){$('score').textContent=`${Math.max(0,stack.length-1)} / ${target}`;}
+function roundRect(x,y,w,h,r,fill,stroke){
+ ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.4;ctx.stroke();}
+}
+function drawCloud(x,y,s){ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.fillStyle='#ffffff88';ctx.beginPath();ctx.arc(0,8,16,0,Math.PI*2);ctx.arc(17,0,22,0,Math.PI*2);ctx.arc(39,9,15,0,Math.PI*2);ctx.fill();ctx.restore();}
+function drawBlock(b,ghost=false){
+ ctx.save();
+ if(ghost)ctx.globalAlpha=.55;
+ // soft shadow
+ ctx.fillStyle='#78658c18';roundRect(b.x+2,b.y+5,b.w,b.h,10,'#78658c18');
+ roundRect(b.x,b.y,b.w,b.h,10,b.item.color,b.item.edge);
+ // little highlight
+ ctx.strokeStyle='#ffffffb5';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(b.x+12,b.y+5);ctx.lineTo(b.x+b.w-12,b.y+5);ctx.stroke();
+ const pic=pictures[b.item.img];
+ const side=Math.min(b.h-8,64);
+ if(pic&&pic.complete&&pic.naturalWidth){ctx.save();ctx.beginPath();ctx.roundRect(b.x+5,b.y+4,side,side,9);ctx.clip();ctx.drawImage(pic,b.x+5,b.y+4,side,side);ctx.restore();}
+ else {ctx.font=`${Math.min(34,b.h*.67)}px "Apple Color Emoji","Segoe UI Emoji",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.item.emoji,b.x+b.w*.24,b.y+b.h*.51);}
+ if(b.w>100){ctx.fillStyle='#574c67';ctx.font='700 12px -apple-system,BlinkMacSystemFont,Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(b.item.name,b.x+b.w*.69,b.y+b.h*.53);}
+ ctx.restore();
+}
+function draw(){
+ if(!W||!H)return;
+ ctx.clearRect(0,0,W,H);
+ // dreamy sky
+ const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#e8e3ff');grad.addColorStop(.58,'#fff0f5');grad.addColorStop(1,'#fff7e8');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ drawCloud((W*.16+offset*.15)%(W+100)-30,H*.22,.8);drawCloud((W*.78-offset*.1+W)%(W+100)-20,H*.34,.62);
+ // sparkles
+ for(let i=0;i<9;i++){const x=(i*83+29)%W,y=(i*67+45)%(H*.55);ctx.fillStyle='#ffffff99';ctx.beginPath();ctx.arc(x,y,1.6+(i%2),0,Math.PI*2);ctx.fill();}
+ // floor
+ ctx.fillStyle='#f4dfd6';ctx.fillRect(0,baseY(),W,H-baseY());
+ ctx.fillStyle='#ffffffaa';ctx.fillRect(0,baseY(),W,3);
+ const bh=blockH(),base=baseY();
+ // camera tracks the stack upward after it grows
+ const top=stack.length?stack[stack.length-1].y:base;
+ const desired=Math.max(0,base- H*.68-top);
+ offset+=(desired-offset)*.09;
+ ctx.save();ctx.translate(0,offset);
+ stack.forEach((b,i)=>{drawBlock(b);});
+ if(moving){
+   // dotted target outline beneath moving object
+   const prev=stack[stack.length-1];
+   ctx.setLineDash([4,5]);ctx.strokeStyle='#8c72d988';ctx.lineWidth=1.5;
+   roundRect(prev.x,prev.y-bh-3,prev.w,bh,10,'#ffffff22','#8c72d966');ctx.setLineDash([]);
+   drawBlock(moving);
+ }
+ ctx.restore();
+ if(!playing&&!won){
+   // decorative clouds still visible behind start overlay
+ }
+}
+function showToast(text){
+ $('toast').textContent=text;$('toast').classList.add('show');
+ clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1000);
+}
+function drop(){
+ if(!playing||won)return;
+ if(!moving){spawn();return;}
+ const b=moving,prev=stack[stack.length-1];
+ // Place only the part that overlaps the previous floor; no automatic snapping.
+ const left=Math.max(b.x,prev.x);
+ const right=Math.min(b.x+b.w,prev.x+prev.w);
+ const overlap=right-left;
+ if(overlap<Math.max(34,prev.w*.16)){
+   showToast('Почти! Попробуй ещё раз');
+   moving.x=12;moving.dir=1;moving.speed=Math.max(.7,moving.speed*.88);
+   draw();return;
+ }
+ const accuracy=overlap/Math.min(b.w,prev.w);
+ const placed={x:left,y:prev.y-b.h-2,w:overlap,h:b.h,item:b.item};
+ const message=accuracy>.9?'Идеально! ✨':accuracy>.7?'Хорошее попадание!':'Башня стала уже — лови точнее';
+ stack.push(placed);moving=null;updateStats();showToast(message);
+ if(stack.length-1>best){best=stack.length-1;localStorage.setItem('cozyTowerBest',best);$('best').textContent=best;}
+ if(stack.length-1>=target){win();}
+ else {spawn();}
+ draw();
+}
+function win(){
+ won=true;playing=false;moving=null;draw();
+ $('panelTitle').textContent='Ты построила башню!';
+ $('panelText').textContent=`Ура! Ты достигла ${target} этажей и собрала целую башню уютных вещей. Твой рекорд — ${best}. Хочешь построить ещё одну?`;
+ $('startBtn').textContent='Построить ещё раз';
+ $('overlay').style.display='flex';
+ $('hintText').textContent='Победа! 🎉';
+}
+function start(){
+ $('overlay').style.display='none';playing=true;won=false;initStack();spawn();draw();
+}
+function restartAsk(){if(playing&&stack.length>1&&!confirm('Начать башню заново?'))return;start();}
+function undo(){
+ if(!playing||stack.length<=1)return;
+ stack.pop();moving=null;updateStats();spawn();showToast('Последний этаж убран ↶');draw();
+}
+function frame(t){
+ if(!lastTime)lastTime=t;const dt=Math.min((t-lastTime)/16.67,2);lastTime=t;
+ if(playing&&moving){
+  moving.x+=moving.dir*moving.speed*2.15*dt;
+  if(moving.x+moving.w>W-12){moving.x=W-12-moving.w;moving.dir=-1;}
+  if(moving.x<12){moving.x=12;moving.dir=1;}
+  moving.phase+=dt;
+ }
+ offset+=.0;draw();anim=requestAnimationFrame(frame);
+}
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();if(playing)drop();});
+$('dropBtn').addEventListener('click',drop);
+$('startBtn').addEventListener('click',start);
+$('restartBtn').addEventListener('click',restartAsk);
+$('undoBtn').addEventListener('click',undo);
+window.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='Enter'){e.preventDefault();if(!playing&&$('overlay').style.display!=='none')start();else drop();}if(e.key.toLowerCase()==='r')restartAsk();});
+window.addEventListener('resize',resize);
+initStack();resize();$('overlay').style.display='flex';cancelAnimationFrame(anim);anim=requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
